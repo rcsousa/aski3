@@ -8,7 +8,6 @@ import {
   TabList,
   TabPanels,
   TabPanel,
-  CodeSnippet,
   Button,
   RadioButtonGroup,
   RadioButton,
@@ -26,6 +25,9 @@ import { ArrowLeft, ArrowRight, Checkmark } from '@carbon/icons-react';
 import { useCourseStore } from '../stores/courseStore';
 import { api } from '../stores/authStore';
 import type { QuizResult, QuizAnswerDetail } from '../types';
+import { CodeSandbox } from '../components/course/CodeSandbox';
+import { KGVisualizer } from '../components/kg/KGVisualizer';
+import { SPARQLPlayground } from '../components/kg/SPARQLPlayground';
 
 export function LessonPage() {
   const { sectionId } = useParams<{ sectionId: string }>();
@@ -167,6 +169,7 @@ export function LessonPage() {
             {currentSection.quiz_questions && currentSection.quiz_questions.length > 0 && (
               <Tab>Quiz ({currentSection.quiz_questions.length})</Tab>
             )}
+            <Tab>Playground</Tab>
           </TabList>
 
           <TabPanels>
@@ -196,37 +199,29 @@ export function LessonPage() {
             {currentSection.code_examples && currentSection.code_examples.length > 0 && (
               <TabPanel>
                 <Stack gap={6}>
-                  {currentSection.code_examples.map((example) => (
-                    <div key={example.id}>
-                      <Tile>
-                        <Stack gap={4}>
-                          <div>
-                            <p style={{ fontWeight: 600, fontSize: '1rem', marginBottom: 'var(--cds-spacing-02)' }}>
-                              {example.title}
-                            </p>
-                            <Tag type="cool-gray" size="sm">
-                              {example.language}
-                            </Tag>
-                          </div>
+                  {currentSection.code_examples.map((example) => {
+                    const isKGExample =
+                      example.code.includes('rdflib') || example.code.includes('Graph()');
 
-                          <CodeSnippet
-                            type="multi"
-                            feedback="Copiado!"
-                            minCollapsedNumberOfRows={5}
-                            maxCollapsedNumberOfRows={15}
-                          >
-                            {example.code}
-                          </CodeSnippet>
-
-                          {example.explanation && (
-                            <p style={{ color: 'var(--cds-text-secondary)', fontSize: '0.875rem', lineHeight: 1.6 }}>
-                              {example.explanation}
-                            </p>
+                    if (isKGExample) {
+                      // Parse inline triples from the code for visualization
+                      // We show both the KGVisualizer (if triples can be inferred) and the sandbox
+                      const demoTriples = extractDemoTriples(example.code);
+                      return (
+                        <Stack key={example.id} gap={4}>
+                          {demoTriples.length > 0 && (
+                            <KGVisualizer
+                              triples={demoTriples}
+                              title={`Grafo: ${example.title}`}
+                            />
                           )}
+                          <CodeSandbox example={example} />
                         </Stack>
-                      </Tile>
-                    </div>
-                  ))}
+                      );
+                    }
+
+                    return <CodeSandbox key={example.id} example={example} />;
+                  })}
                 </Stack>
               </TabPanel>
             )}
@@ -332,6 +327,14 @@ export function LessonPage() {
                 </div>
               </TabPanel>
             )}
+            {/* Playground tab — always visible */}
+            <TabPanel>
+              <div style={{ maxWidth: '900px' }}>
+                <SPARQLPlayground
+                  defaultQuery="SELECT DISTINCT ?class WHERE { ?s a ?class } LIMIT 20"
+                />
+              </div>
+            </TabPanel>
           </TabPanels>
         </Tabs>
       </Column>
@@ -359,6 +362,43 @@ export function LessonPage() {
       </Column>
     </Grid>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Helper: extract a rough set of triples from rdflib-style Python code
+// so we can render a preview graph even before the code is executed.
+// ---------------------------------------------------------------------------
+interface DemoTriple {
+  subject: string;
+  predicate: string;
+  object: string;
+}
+
+function extractDemoTriples(code: string): DemoTriple[] {
+  const triples: DemoTriple[] = [];
+
+  // Match patterns like: g.add((URIRef("..."), URIRef("..."), URIRef("...")|Literal("...")))
+  const addPattern =
+    /g\.add\(\s*\(\s*(URIRef\(["']([^"']+)["']\)|Literal\(["']([^"']+)["']\)|BNode\(\))\s*,\s*(URIRef\(["']([^"']+)["']\)|Literal\(["']([^"']+)["']\))\s*,\s*(URIRef\(["']([^"']+)["']\)|Literal\(["']([^"']+)["']\)|BNode\(\))\s*\)\s*\)/g;
+
+  let match: RegExpExecArray | null;
+  while ((match = addPattern.exec(code)) !== null) {
+    const resolveValue = (urirefPart: string, literalPart: string): string => {
+      if (urirefPart) return urirefPart;
+      if (literalPart) return `"${literalPart}"`;
+      return '_:blank';
+    };
+
+    const subject = resolveValue(match[2], match[3]);
+    const predicate = resolveValue(match[5], match[6]);
+    const object = resolveValue(match[8], match[9]);
+
+    if (subject && predicate && object) {
+      triples.push({ subject, predicate, object });
+    }
+  }
+
+  return triples;
 }
 
 interface QuizAnswerFeedbackProps {

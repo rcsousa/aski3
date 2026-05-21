@@ -37,6 +37,7 @@ export interface CodeExample {
   code: string;
   explanation: string;
   order_index: number;
+  expected_output?: string;
 }
 
 export type QuestionType = 'multiple_choice' | 'true_false';
