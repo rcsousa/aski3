@@ -13,6 +13,12 @@ dist/
 # Node
 node_modules/
 frontend/dist/
+package-lock.json
+
+# SQLite dev DB
+*.db
+*.db-shm
+*.db-wal
 
 # Env
 .env
