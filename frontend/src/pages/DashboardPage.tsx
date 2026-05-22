@@ -136,25 +136,16 @@ export function DashboardPage() {
       </Column>
 
       <Column sm={4} md={8} lg={16} style={{ marginTop: 'var(--cds-spacing-07)' }}>
-        <DataTable rows={tableRows} headers={tableHeaders} isSortable>
-          {({
-            rows,
-            headers,
-            getTableProps,
-            getHeaderProps,
-            getRowProps,
-          }: {
-            rows: typeof tableRows;
-            headers: typeof tableHeaders;
-            getTableProps: () => Record<string, unknown>;
-            getHeaderProps: (opts: { header: (typeof tableHeaders)[0] }) => Record<string, unknown>;
-            getRowProps: (opts: { row: (typeof tableRows)[0] }) => Record<string, unknown>;
-          }) => (
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <DataTable rows={tableRows as any[]} headers={tableHeaders as any[]} isSortable>
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          {(({ rows, headers, getTableProps, getHeaderProps, getRowProps }: any) => (
             <TableContainer title="Todas as seções" description="Seu progresso em cada módulo do curso">
               <Table {...getTableProps()}>
                 <TableHead>
                   <TableRow>
-                    {headers.map((header) => (
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                    {headers.map((header: any) => (
                       <TableHeader
                         key={header.key}
                         {...getHeaderProps({ header })}
@@ -165,7 +156,8 @@ export function DashboardPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {rows.map((row) => (
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  {rows.map((row: any) => (
                     <TableRow key={row.id} {...getRowProps({ row })}>
                       <TableCell>{row.section}</TableCell>
                       <TableCell>{row.course}</TableCell>
@@ -197,7 +189,7 @@ export function DashboardPage() {
                 </TableBody>
               </Table>
             </TableContainer>
-          )}
+          )) as any}
         </DataTable>
       </Column>
     </Grid>

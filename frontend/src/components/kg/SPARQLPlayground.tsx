@@ -227,25 +227,15 @@ export function SPARQLPlayground({ defaultQuery, endpoint: _endpoint }: SPARQLPl
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <DataTable rows={tableRows} headers={tableHeaders}>
-                  {({
-                    rows,
-                    headers,
-                    getTableProps,
-                    getHeaderProps,
-                    getRowProps,
-                  }: {
-                    rows: Array<{ id: string; cells: Array<{ id: string; value: string }> }>;
-                    headers: Array<{ key: string; header: string }>;
-                    getTableProps: () => Record<string, unknown>;
-                    getHeaderProps: (args: { header: { key: string; header: string } }) => Record<string, unknown>;
-                    getRowProps: (args: { row: { id: string; cells: Array<{ id: string; value: string }> } }) => Record<string, unknown>;
-                  }) => (
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                <DataTable rows={tableRows as any[]} headers={tableHeaders as any[]}>
+                  {(({ rows, headers, getTableProps, getHeaderProps, getRowProps }: any) => (
                     <TableContainer>
                       <Table {...getTableProps()} size="sm">
                         <TableHead>
                           <TableRow>
-                            {headers.map((header) => (
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                            {headers.map((header: any) => (
                               <TableHeader key={header.key} {...getHeaderProps({ header })}>
                                 {header.header}
                               </TableHeader>
@@ -253,9 +243,11 @@ export function SPARQLPlayground({ defaultQuery, endpoint: _endpoint }: SPARQLPl
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {rows.map((row) => (
+                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                          {rows.map((row: any) => (
                             <TableRow key={row.id} {...getRowProps({ row })}>
-                              {row.cells.map((cell) => (
+                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                              {row.cells.map((cell: any) => (
                                 <TableCell key={cell.id}>
                                   <code style={{
                                     fontFamily: 'IBM Plex Mono, monospace',
@@ -271,7 +263,7 @@ export function SPARQLPlayground({ defaultQuery, endpoint: _endpoint }: SPARQLPl
                         </TableBody>
                       </Table>
                     </TableContainer>
-                  )}
+                  )) as any}
                 </DataTable>
               </div>
             )}

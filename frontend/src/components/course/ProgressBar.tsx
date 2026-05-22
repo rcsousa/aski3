@@ -36,7 +36,6 @@ export function CourseProgressBar({
             complete={isCompleted}
             current={isCurrent}
             onClick={onSectionClick ? () => onSectionClick(section.id) : undefined}
-            style={onSectionClick ? { cursor: 'pointer' } : undefined}
           />
         );
       })}

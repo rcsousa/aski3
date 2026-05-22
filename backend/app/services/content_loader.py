@@ -38,7 +38,7 @@ async def load_all_modules(db: AsyncSession) -> None:
 
 
 async def _upsert_course(db: AsyncSession, data: dict) -> None:
-    slug = data["slug"]
+    slug = data.get("slug") or data["id"].replace("module-", "module-")
     result = await db.execute(select(Course).where(Course.slug == slug))
     course = result.scalar_one_or_none()
 
@@ -88,10 +88,10 @@ async def _upsert_section(db: AsyncSession, course_id: int, data: dict) -> None:
         section.estimated_minutes = data.get("estimated_minutes", section.estimated_minutes)
         await db.flush()
 
-    for example_data in data.get("examples", []):
+    for example_data in data.get("code_examples", data.get("examples", [])):
         await _upsert_example(db, section.id, example_data)
 
-    for quiz_data in data.get("quizzes", []):
+    for quiz_data in data.get("quiz", data.get("quizzes", [])):
         await _upsert_quiz(db, section.id, quiz_data)
 
 
@@ -137,19 +137,21 @@ async def _upsert_quiz(db: AsyncSession, section_id: int, data: dict) -> None:
         quiz_type = QuizType.multiple_choice
 
     if quiz is None:
+        correct = data.get("correct_answer") or str(data.get("correct", ""))
         quiz = Quiz(
             section_id=section_id,
             question=question,
             type=quiz_type,
             options=data.get("options", []),
-            correct_answer=data.get("correct_answer", ""),
+            correct_answer=correct,
             explanation=data.get("explanation", ""),
         )
         db.add(quiz)
     else:
+        correct = data.get("correct_answer") or str(data.get("correct", quiz.correct_answer))
         quiz.type = quiz_type
         quiz.options = data.get("options", quiz.options)
-        quiz.correct_answer = data.get("correct_answer", quiz.correct_answer)
+        quiz.correct_answer = correct
         quiz.explanation = data.get("explanation", quiz.explanation)
 
     await db.flush()

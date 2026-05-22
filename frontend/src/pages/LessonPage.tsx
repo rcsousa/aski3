@@ -261,7 +261,7 @@ export function LessonPage() {
                               name={`question-${question.id}`}
                               legendText="Selecione uma opção"
                               valueSelected={answers[question.id] ?? ''}
-                              onChange={(value: string) => handleAnswerChange(question.id, value)}
+                              onChange={(value) => handleAnswerChange(question.id, value as string)}
                               disabled={!!quizResult}
                               orientation="vertical"
                             >
