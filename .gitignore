@@ -1,1 +1,29 @@
 launchConfigurations/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+.pytest_cache/
+
+# Node
+node_modules/
+frontend/dist/
+package-lock.json
+
+# SQLite dev DB
+*.db
+*.db-shm
+*.db-wal
+
+# Env
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
