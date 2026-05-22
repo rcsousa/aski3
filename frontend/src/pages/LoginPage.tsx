@@ -1,18 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import {
-  Form,
-  TextInput,
-  PasswordInput,
-  Button,
-  InlineNotification,
-  Grid,
-  Column,
-  Tile,
-  Stack,
-  Heading,
-} from '@carbon/react';
+import { GraduationCap } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { Alert, AlertDescription } from '../components/ui/alert';
 
 interface LocationState {
   from?: { pathname: string };
@@ -66,83 +60,81 @@ export function LoginPage() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        backgroundColor: 'var(--cds-background)',
-        paddingTop: '3rem',
-      }}
-    >
-      <Grid>
-        <Column sm={4} md={{ span: 4, offset: 2 }} lg={{ span: 6, offset: 5 }}>
-          <Tile style={{ padding: 'var(--cds-spacing-08)' }}>
-            <Stack gap={6}>
-              <div>
-                <p
-                  style={{
-                    fontSize: '0.875rem',
-                    color: 'var(--cds-text-secondary)',
-                    marginBottom: 'var(--cds-spacing-02)',
-                    fontWeight: 600,
-                    letterSpacing: '0.05em',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Plataforma de Aprendizado
-                </p>
-                <Heading>Semântica para Agentes de IA</Heading>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-600 p-4">
+      <div className="w-full max-w-md">
+        {/* Brand header above card */}
+        <div className="flex flex-col items-center mb-8 text-center">
+          <div className="flex items-center justify-center h-16 w-16 rounded-2xl bg-white/20 backdrop-blur-sm mb-4">
+            <GraduationCap className="h-9 w-9 text-white" />
+          </div>
+          <p className="text-white/70 text-sm font-semibold tracking-widest uppercase mb-1">
+            Plataforma de Aprendizado
+          </p>
+          <h1 className="text-white text-2xl font-bold">Semântica para Agentes de IA</h1>
+        </div>
+
+        <Card className="shadow-2xl">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl">Entrar na plataforma</CardTitle>
+            <CardDescription>Acesse seu painel de aprendizado</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>
+                  <strong>Erro de autenticação:</strong> {error}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <form onSubmit={handleSubmit} noValidate className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  autoFocus
+                  className={emailError ? 'border-destructive focus-visible:ring-destructive' : ''}
+                />
+                {emailError && (
+                  <p className="text-xs text-destructive mt-1">{emailError}</p>
+                )}
               </div>
 
-              {error && (
-                <InlineNotification
-                  kind="error"
-                  title="Erro de autenticação"
-                  subtitle={error}
-                  hideCloseButton
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  className={passwordError ? 'border-destructive focus-visible:ring-destructive' : ''}
                 />
-              )}
+                {passwordError && (
+                  <p className="text-xs text-destructive mt-1">{passwordError}</p>
+                )}
+              </div>
 
-              <Form onSubmit={handleSubmit} noValidate>
-                <Stack gap={5}>
-                  <TextInput
-                    id="email"
-                    type="email"
-                    labelText="E-mail"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    invalid={!!emailError}
-                    invalidText={emailError}
-                    autoComplete="email"
-                    autoFocus
-                  />
-
-                  <PasswordInput
-                    id="password"
-                    labelText="Senha"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    invalid={!!passwordError}
-                    invalidText={passwordError}
-                    autoComplete="current-password"
-                  />
-
-                  <Button
-                    type="submit"
-                    disabled={isLoading}
-                    style={{ width: '100%', maxWidth: '100%' }}
-                  >
-                    {isLoading ? 'Entrando...' : 'Entrar'}
-                  </Button>
-                </Stack>
-              </Form>
-            </Stack>
-          </Tile>
-        </Column>
-      </Grid>
+              <Button type="submit" disabled={isLoading} className="w-full mt-2" size="lg">
+                {isLoading ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    Entrando...
+                  </>
+                ) : (
+                  'Entrar'
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -1,25 +1,18 @@
 import { useState } from 'react';
+import { Play, Copy, Check } from 'lucide-react';
+import { api } from '../../stores/authStore';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { Alert, AlertDescription } from '../ui/alert';
 import {
-  Button,
-  TextArea,
-  Select,
-  SelectItem,
-  InlineLoading,
-  InlineNotification,
-  DataTable,
-  TableContainer,
   Table,
-  TableHead,
-  TableRow,
-  TableHeader,
   TableBody,
   TableCell,
-  Tile,
-  Stack,
-  CopyButton,
-} from '@carbon/react';
-import { Play } from '@carbon/icons-react';
-import { api } from '../../stores/authStore';
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../ui/table';
 
 interface SPARQLResult {
   columns: string[];
@@ -58,7 +51,7 @@ export function SPARQLPlayground({ defaultQuery, endpoint: _endpoint }: SPARQLPl
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<string>('0');
-  const [copyFeedback, setCopyFeedback] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handlePresetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const idx = parseInt(e.target.value, 10);
@@ -91,185 +84,129 @@ export function SPARQLPlayground({ defaultQuery, endpoint: _endpoint }: SPARQLPl
 
   const handleCopy = () => {
     navigator.clipboard.writeText(query).then(() => {
-      setCopyFeedback(true);
-      setTimeout(() => setCopyFeedback(false), 2000);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     });
   };
 
-  // Build DataTable rows from result
-  const tableHeaders = result
-    ? result.columns.map((col) => ({ key: col, header: col }))
-    : [];
-
-  const tableRows = result
-    ? result.rows.map((row, idx) => {
-        const rowObj: Record<string, string> = { id: String(idx) };
-        result.columns.forEach((col, colIdx) => {
-          rowObj[col] = row[colIdx] ?? '';
-        });
-        return rowObj;
-      })
-    : [];
-
   return (
-    <Tile>
-      <Stack gap={6}>
-        {/* Header */}
-        <div>
-          <p style={{ fontWeight: 700, fontSize: '1.125rem', margin: 0, marginBottom: 'var(--cds-spacing-02)' }}>
-            SPARQL Playground
-          </p>
-          <p style={{ color: 'var(--cds-text-secondary)', fontSize: '0.875rem', margin: 0 }}>
-            Escreva e execute queries SPARQL contra o grafo de conhecimento do curso.
-          </p>
+    <Card>
+      <CardHeader>
+        <CardTitle>SPARQL Playground</CardTitle>
+        <CardDescription>
+          Escreva e execute queries SPARQL contra o grafo de conhecimento do curso.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {/* Preset selector */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium" htmlFor="sparql-preset">
+            Queries de exemplo
+          </label>
+          <select
+            id="sparql-preset"
+            value={selectedPreset}
+            onChange={handlePresetChange}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            {PRESET_QUERIES.map((preset, idx) => (
+              <option key={idx} value={String(idx)}>
+                {preset.label}
+              </option>
+            ))}
+            <option value="-1">— Query personalizada —</option>
+          </select>
         </div>
 
-        {/* Preset Query Selector */}
-        <Select
-          id="sparql-preset"
-          labelText="Queries de exemplo"
-          value={selectedPreset}
-          onChange={handlePresetChange}
-        >
-          {PRESET_QUERIES.map((preset, idx) => (
-            <SelectItem key={idx} value={String(idx)} text={preset.label} />
-          ))}
-          <SelectItem value="-1" text="— Query personalizada —" />
-        </Select>
-
-        {/* Query Editor */}
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--cds-spacing-02)' }}>
-            <label
-              htmlFor="sparql-query-textarea"
-              style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--cds-text-primary)' }}
-            >
+        {/* Query editor */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium" htmlFor="sparql-query-textarea">
               Query SPARQL
             </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--cds-spacing-02)' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary)' }}>
-                {copyFeedback ? 'Copiado!' : 'Copiar query'}
-              </span>
-              <CopyButton
-                onClick={handleCopy}
-                feedback="Copiado!"
-                feedbackTimeout={2000}
-              />
-            </div>
+            <Button variant="ghost" size="sm" onClick={handleCopy} className="gap-1.5 h-7 text-xs">
+              {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              {copied ? 'Copiado!' : 'Copiar'}
+            </Button>
           </div>
-          <TextArea
+          <textarea
             id="sparql-query-textarea"
-            labelText=""
             value={query}
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
               setQuery(e.target.value);
               setSelectedPreset('-1');
             }}
             rows={8}
-            style={{ fontFamily: 'IBM Plex Mono, "Courier New", monospace', fontSize: '0.875rem' }}
             placeholder="SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10"
+            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 font-mono resize-y"
           />
         </div>
 
-        {/* Execute Button */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--cds-spacing-04)' }}>
-          {isLoading ? (
-            <InlineLoading description="Executando query..." status="active" />
-          ) : (
-            <Button
-              kind="primary"
-              renderIcon={Play}
-              onClick={handleExecute}
-              size="md"
-            >
-              Executar Query
-            </Button>
-          )}
+        {/* Execute button */}
+        <div>
+          <Button onClick={handleExecute} disabled={isLoading} className="gap-2">
+            {isLoading ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Executando...
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4" />
+                Executar Query
+              </>
+            )}
+          </Button>
         </div>
 
         {/* Error */}
         {error && (
-          <InlineNotification
-            kind="error"
-            title="Erro na query"
-            subtitle={error}
-            onCloseButtonClick={() => setError(null)}
-          />
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
-        {/* Results Table */}
+        {/* Results */}
         {result && (
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--cds-spacing-03)', marginBottom: 'var(--cds-spacing-04)' }}>
-              <p style={{ fontWeight: 600, fontSize: '0.875rem', margin: 0 }}>Resultados</p>
-              <span style={{
-                background: 'var(--cds-layer-accent)',
-                color: 'var(--cds-text-secondary)',
-                borderRadius: '10px',
-                padding: '2px 10px',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-              }}>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold">Resultados</p>
+              <Badge variant="secondary">
                 {result.rows.length} linha{result.rows.length !== 1 ? 's' : ''}
-              </span>
+              </Badge>
             </div>
 
             {result.rows.length === 0 ? (
-              <div style={{
-                padding: 'var(--cds-spacing-07)',
-                textAlign: 'center',
-                color: 'var(--cds-text-secondary)',
-                background: 'var(--cds-layer)',
-                border: '1px solid var(--cds-border-subtle)',
-                borderRadius: '4px',
-              }}>
+              <div className="rounded-md border bg-muted/30 p-8 text-center text-sm text-muted-foreground">
                 Nenhum resultado encontrado para esta query.
               </div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                <DataTable rows={tableRows as any[]} headers={tableHeaders as any[]}>
-                  {(({ rows, headers, getTableProps, getHeaderProps, getRowProps }: any) => (
-                    <TableContainer>
-                      <Table {...getTableProps()} size="sm">
-                        <TableHead>
-                          <TableRow>
-                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                            {headers.map((header: any) => (
-                              <TableHeader key={header.key} {...getHeaderProps({ header })}>
-                                {header.header}
-                              </TableHeader>
-                            ))}
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                          {rows.map((row: any) => (
-                            <TableRow key={row.id} {...getRowProps({ row })}>
-                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                              {row.cells.map((cell: any) => (
-                                <TableCell key={cell.id}>
-                                  <code style={{
-                                    fontFamily: 'IBM Plex Mono, monospace',
-                                    fontSize: '0.8125rem',
-                                    wordBreak: 'break-all',
-                                  }}>
-                                    {cell.value}
-                                  </code>
-                                </TableCell>
-                              ))}
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  )) as any}
-                </DataTable>
+              <div className="overflow-x-auto rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {result.columns.map((col) => (
+                        <TableHead key={col} className="font-semibold">{col}</TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {result.rows.map((row, idx) => (
+                      <TableRow key={idx}>
+                        {row.map((cell, colIdx) => (
+                          <TableCell key={colIdx}>
+                            <code className="text-xs font-mono break-all">{cell}</code>
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             )}
           </div>
         )}
-      </Stack>
-    </Tile>
+      </CardContent>
+    </Card>
   );
 }

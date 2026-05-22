@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, computed_field, field_validator
 
 from app.models.models import QuizType
 
@@ -50,6 +50,10 @@ class UserResponse(UserBase):
     created_at: datetime
 
 
+# ---------------------------------------------------------------------------
+# Code Examples
+# ---------------------------------------------------------------------------
+
 class CodeExampleBase(BaseModel):
     title: str
     description: str = ""
@@ -78,6 +82,20 @@ class CodeExampleResponse(CodeExampleBase):
     id: int
     section_id: int
 
+    @computed_field
+    @property
+    def order_index(self) -> int:
+        return self.order
+
+    @computed_field
+    @property
+    def explanation(self) -> str:
+        return self.description
+
+
+# ---------------------------------------------------------------------------
+# Quiz
+# ---------------------------------------------------------------------------
 
 class QuizBase(BaseModel):
     question: str
@@ -107,6 +125,7 @@ class QuizResponse(QuizBase):
 
 
 class QuizPublic(BaseModel):
+    """Quiz question returned to the student (excludes correct_answer)."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -114,7 +133,22 @@ class QuizPublic(BaseModel):
     question: str
     type: QuizType
     options: list[Any] = []
+    explanation: str = ""
 
+    @computed_field
+    @property
+    def question_type(self) -> str:
+        return self.type.value
+
+    @computed_field
+    @property
+    def order_index(self) -> int:
+        return 0
+
+
+# ---------------------------------------------------------------------------
+# Sections
+# ---------------------------------------------------------------------------
 
 class SectionBase(BaseModel):
     title: str
@@ -142,6 +176,11 @@ class SectionSummary(BaseModel):
     order: int
     estimated_minutes: int
 
+    @computed_field
+    @property
+    def order_index(self) -> int:
+        return self.order
+
 
 class SectionResponse(SectionBase):
     model_config = ConfigDict(from_attributes=True)
@@ -150,7 +189,32 @@ class SectionResponse(SectionBase):
     course_id: int
     examples: list[CodeExampleResponse] = []
     quizzes: list[QuizPublic] = []
+    is_published: bool = True
 
+    @computed_field
+    @property
+    def content(self) -> str:
+        return self.content_md
+
+    @computed_field
+    @property
+    def order_index(self) -> int:
+        return self.order
+
+    @computed_field
+    @property
+    def code_examples(self) -> list[CodeExampleResponse]:
+        return self.examples
+
+    @computed_field
+    @property
+    def quiz_questions(self) -> list[QuizPublic]:
+        return self.quizzes
+
+
+# ---------------------------------------------------------------------------
+# Courses
+# ---------------------------------------------------------------------------
 
 class CourseBase(BaseModel):
     slug: str
@@ -176,6 +240,12 @@ class CourseListResponse(CourseBase):
 
     id: int
     sections: list[SectionSummary] = []
+    is_published: bool = True
+
+    @computed_field
+    @property
+    def estimated_hours(self) -> float:
+        return round(self.estimated_minutes / 60, 1)
 
 
 class CourseDetailResponse(CourseBase):
@@ -183,12 +253,34 @@ class CourseDetailResponse(CourseBase):
 
     id: int
     sections: list[SectionSummary] = []
+    is_published: bool = True
+
+    @computed_field
+    @property
+    def estimated_hours(self) -> float:
+        return round(self.estimated_minutes / 60, 1)
 
 
-class QuizSubmission(BaseModel):
-    answers: dict[int, str]
+# ---------------------------------------------------------------------------
+# Quiz submission response (aligned with frontend QuizResult type)
+# ---------------------------------------------------------------------------
+
+class QuizAnswerDetail(BaseModel):
+    question_id: int
+    correct: bool
+    correct_answer: str
+    explanation: str
 
 
+class QuizResultResponse(BaseModel):
+    score: int
+    total: int
+    percentage: float
+    passed: bool
+    details: list[QuizAnswerDetail]
+
+
+# Keep old names for internal use by the quiz route
 class QuizResult(BaseModel):
     question_id: int
     question: str
@@ -198,12 +290,20 @@ class QuizResult(BaseModel):
     explanation: str
 
 
+class QuizSubmission(BaseModel):
+    answers: dict[int, str]
+
+
 class QuizSubmissionResponse(BaseModel):
     score: float
     total: int
     correct: int
     results: list[QuizResult]
 
+
+# ---------------------------------------------------------------------------
+# User Progress
+# ---------------------------------------------------------------------------
 
 class UserProgressBase(BaseModel):
     section_id: int
@@ -218,3 +318,18 @@ class UserProgressResponse(BaseModel):
     completed_at: datetime | None
     quiz_score: float | None
     quiz_attempts: int
+
+    @computed_field
+    @property
+    def completed(self) -> bool:
+        return self.completed_at is not None
+
+    @computed_field
+    @property
+    def score(self) -> float | None:
+        return self.quiz_score
+
+    @computed_field
+    @property
+    def attempts(self) -> int:
+        return self.quiz_attempts

@@ -1,33 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Grid,
-  Column,
-  Tabs,
-  Tab,
-  TabList,
-  TabPanels,
-  TabPanel,
-  Button,
-  RadioButtonGroup,
-  RadioButton,
-  Toggle,
-  InlineNotification,
-  Loading,
-  ProgressIndicator,
-  ProgressStep,
-  Tag,
-  Tile,
-  Stack,
-  Heading,
-} from '@carbon/react';
-import { ArrowLeft, ArrowRight, Checkmark } from '@carbon/icons-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, CheckCircle } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useCourseStore } from '../stores/courseStore';
 import { api } from '../stores/authStore';
 import type { QuizResult, QuizAnswerDetail } from '../types';
 import { CodeSandbox } from '../components/course/CodeSandbox';
 import { KGVisualizer } from '../components/kg/KGVisualizer';
 import { SPARQLPlayground } from '../components/kg/SPARQLPlayground';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Card, CardContent } from '../components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
+import { Progress } from '../components/ui/progress';
 
 export function LessonPage() {
   const { sectionId } = useParams<{ sectionId: string }>();
@@ -83,7 +70,7 @@ export function LessonPage() {
 
     try {
       const { data } = await api.post<QuizResult>(
-        `/sections/${numericSectionId}/quiz`,
+        `/quiz/${numericSectionId}/submit`,
         { answers },
       );
       setQuizResult(data);
@@ -107,266 +94,268 @@ export function LessonPage() {
 
   if (!currentSection) {
     return (
-      <Grid>
-        <Column sm={4} md={8} lg={16}>
-          <div style={{ display: 'flex', justifyContent: 'center', padding: 'var(--cds-spacing-10)' }}>
-            <Loading description="Carregando lição..." withOverlay={false} />
-          </div>
-        </Column>
-      </Grid>
+      <div className="flex items-center justify-center py-20">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Carregando lição...</p>
+        </div>
+      </div>
     );
   }
 
-  return (
-    <Grid>
-      <Column sm={4} md={8} lg={16}>
-        <div className="page-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--cds-spacing-03)', marginBottom: 'var(--cds-spacing-03)' }}>
-            {currentCourse && (
-              <Tag type="blue" size="sm">
-                {currentCourse.title}
-              </Tag>
-            )}
-            <Tag type="warm-gray" size="sm">
-              {currentSection.estimated_minutes} min
-            </Tag>
-            {sectionProgress?.completed && (
-              <Tag type="green" size="sm">
-                <Checkmark size={12} style={{ marginRight: '4px' }} />
-                Concluído
-              </Tag>
-            )}
-          </div>
-          <Heading>{currentSection.title}</Heading>
-        </div>
-      </Column>
+  // Compute tab value list
+  const hasExamples = currentSection.code_examples && currentSection.code_examples.length > 0;
+  const hasQuiz = currentSection.quiz_questions && currentSection.quiz_questions.length > 0;
 
+  return (
+    <div className="space-y-6 max-w-5xl">
+      {/* Lesson header */}
+      <div>
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          {currentCourse && (
+            <Badge variant="default">{currentCourse.title}</Badge>
+          )}
+          <Badge variant="secondary">{currentSection.estimated_minutes} min</Badge>
+          {sectionProgress?.completed && (
+            <Badge variant="success" className="gap-1">
+              <CheckCircle className="h-3 w-3" />
+              Concluído
+            </Badge>
+          )}
+        </div>
+        <h1 className="text-2xl font-bold">{currentSection.title}</h1>
+      </div>
+
+      {/* Progress indicator */}
       {sections.length > 1 && (
-        <Column sm={4} md={8} lg={16} style={{ marginBottom: 'var(--cds-spacing-06)' }}>
-          <ProgressIndicator currentIndex={currentIndex} spaceEqually>
-            {sections.map((section) => {
-              const sectionProg = progress.find((p) => p.section_id === section.id);
-              return (
-                <ProgressStep
-                  key={section.id}
-                  label={section.title}
-                  complete={sectionProg?.completed ?? false}
-                  current={section.id === numericSectionId}
-                />
-              );
-            })}
-          </ProgressIndicator>
-        </Column>
+        <div className="space-y-2">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Seção {currentIndex + 1} de {sections.length}</span>
+            <span>{Math.round(((currentIndex + 1) / sections.length) * 100)}% do curso</span>
+          </div>
+          <Progress value={((currentIndex + 1) / sections.length) * 100} />
+        </div>
       )}
 
-      <Column sm={4} md={8} lg={16}>
-        <Tabs>
-          <TabList aria-label="Conteúdo da lição">
-            <Tab>Conteúdo</Tab>
-            {currentSection.code_examples && currentSection.code_examples.length > 0 && (
-              <Tab>Exemplos ({currentSection.code_examples.length})</Tab>
-            )}
-            {currentSection.quiz_questions && currentSection.quiz_questions.length > 0 && (
-              <Tab>Quiz ({currentSection.quiz_questions.length})</Tab>
-            )}
-            <Tab>Playground</Tab>
-          </TabList>
+      {/* Content tabs */}
+      <Tabs defaultValue="content">
+        <TabsList>
+          <TabsTrigger value="content">Conteúdo</TabsTrigger>
+          {hasExamples && (
+            <TabsTrigger value="exemplos">
+              Exemplos ({currentSection.code_examples!.length})
+            </TabsTrigger>
+          )}
+          {hasQuiz && (
+            <TabsTrigger value="quiz">
+              Quiz ({currentSection.quiz_questions!.length})
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="playground">Playground</TabsTrigger>
+        </TabsList>
 
-          <TabPanels>
-            <TabPanel>
-              <div style={{ maxWidth: '800px' }}>
-                {/* TODO: Replace with a proper Markdown renderer (e.g., react-markdown) */}
-                <div
-                  className="lesson-content"
-                  dangerouslySetInnerHTML={{ __html: currentSection.content }}
-                />
+        {/* Content tab */}
+        <TabsContent value="content">
+          <div className="max-w-3xl">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose prose-slate max-w-none prose-img:rounded-xl prose-img:shadow-md prose-table:w-full prose-th:bg-muted prose-th:px-4 prose-th:py-2 prose-td:px-4 prose-td:py-2 prose-td:border prose-th:border">
+              {currentSection.content}
+            </ReactMarkdown>
 
-                {!sectionProgress?.completed && (
-                  <div style={{ marginTop: 'var(--cds-spacing-07)' }}>
-                    <Button
-                      onClick={handleMarkComplete}
-                      disabled={isCompleting}
-                      renderIcon={Checkmark}
-                      kind="primary"
-                    >
-                      {isCompleting ? 'Marcando...' : 'Marcar como concluído'}
-                    </Button>
-                  </div>
-                )}
+            {!sectionProgress?.completed && (
+              <div className="mt-8">
+                <Button onClick={handleMarkComplete} disabled={isCompleting} className="gap-2">
+                  {isCompleting ? (
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      Marcando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      Marcar como concluído
+                    </>
+                  )}
+                </Button>
               </div>
-            </TabPanel>
-
-            {currentSection.code_examples && currentSection.code_examples.length > 0 && (
-              <TabPanel>
-                <Stack gap={6}>
-                  {currentSection.code_examples.map((example) => {
-                    const isKGExample =
-                      example.code.includes('rdflib') || example.code.includes('Graph()');
-
-                    if (isKGExample) {
-                      // Parse inline triples from the code for visualization
-                      // We show both the KGVisualizer (if triples can be inferred) and the sandbox
-                      const demoTriples = extractDemoTriples(example.code);
-                      return (
-                        <Stack key={example.id} gap={4}>
-                          {demoTriples.length > 0 && (
-                            <KGVisualizer
-                              triples={demoTriples}
-                              title={`Grafo: ${example.title}`}
-                            />
-                          )}
-                          <CodeSandbox example={example} />
-                        </Stack>
-                      );
-                    }
-
-                    return <CodeSandbox key={example.id} example={example} />;
-                  })}
-                </Stack>
-              </TabPanel>
             )}
+          </div>
+        </TabsContent>
 
-            {currentSection.quiz_questions && currentSection.quiz_questions.length > 0 && (
-              <TabPanel>
-                <div style={{ maxWidth: '700px' }}>
-                  <Stack gap={7}>
-                    {currentSection.quiz_questions.map((question, index) => (
-                      <Tile key={question.id}>
-                        <Stack gap={4}>
-                          <div style={{ display: 'flex', gap: 'var(--cds-spacing-03)', alignItems: 'flex-start' }}>
-                            <Tag type="blue" size="sm">
-                              {index + 1}
-                            </Tag>
-                            <p style={{ fontWeight: 500, fontSize: '0.9375rem', lineHeight: 1.5 }}>
-                              {question.question}
-                            </p>
-                          </div>
+        {/* Examples tab */}
+        {hasExamples && (
+          <TabsContent value="exemplos">
+            <div className="space-y-6">
+              {currentSection.code_examples!.map((example) => {
+                const isKGExample =
+                  example.code.includes('rdflib') || example.code.includes('Graph()');
 
-                          {question.question_type === 'true_false' ? (
-                            <div className="quiz-option">
-                              <Toggle
-                                id={`toggle-${question.id}`}
-                                labelText="Verdadeiro / Falso"
-                                labelA="Falso"
-                                labelB="Verdadeiro"
-                                toggled={answers[question.id] === 'true'}
-                                onToggle={(checked: boolean) =>
-                                  handleAnswerChange(question.id, checked ? 'true' : 'false')
-                                }
-                                disabled={!!quizResult}
-                              />
-                            </div>
-                          ) : (
-                            <RadioButtonGroup
-                              name={`question-${question.id}`}
-                              legendText="Selecione uma opção"
-                              valueSelected={answers[question.id] ?? ''}
-                              onChange={(value) => handleAnswerChange(question.id, value as string)}
-                              disabled={!!quizResult}
-                              orientation="vertical"
-                            >
-                              {question.options?.map((option, optIdx) => (
-                                <RadioButton
-                                  key={optIdx}
-                                  id={`q${question.id}-opt${optIdx}`}
-                                  labelText={option}
-                                  value={option}
-                                />
-                              ))}
-                            </RadioButtonGroup>
-                          )}
-
-                          {quizResult && (
-                            <QuizAnswerFeedback
-                              questionId={question.id}
-                              details={quizResult.details}
-                            />
-                          )}
-                        </Stack>
-                      </Tile>
-                    ))}
-
-                    {quizError && (
-                      <InlineNotification
-                        kind="error"
-                        title="Erro"
-                        subtitle={quizError}
-                        onCloseButtonClick={() => setQuizError(null)}
-                      />
-                    )}
-
-                    {quizResult ? (
-                      <div className="quiz-result">
-                        <InlineNotification
-                          kind={quizResult.passed ? 'success' : 'warning'}
-                          title={quizResult.passed ? 'Parabéns!' : 'Continue praticando'}
-                          subtitle={`Você acertou ${quizResult.score} de ${quizResult.total} questões (${quizResult.percentage}%).`}
-                          hideCloseButton
+                if (isKGExample) {
+                  const demoTriples = extractDemoTriples(example.code);
+                  return (
+                    <div key={example.id} className="space-y-4">
+                      {demoTriples.length > 0 && (
+                        <KGVisualizer
+                          triples={demoTriples}
+                          title={`Grafo: ${example.title}`}
                         />
-                        <Button
-                          kind="ghost"
-                          style={{ marginTop: 'var(--cds-spacing-04)' }}
-                          onClick={() => {
-                            setQuizResult(null);
-                            setAnswers({});
-                          }}
-                        >
-                          Tentar novamente
-                        </Button>
+                      )}
+                      <CodeSandbox example={example} />
+                    </div>
+                  );
+                }
+
+                return <CodeSandbox key={example.id} example={example} />;
+              })}
+            </div>
+          </TabsContent>
+        )}
+
+        {/* Quiz tab */}
+        {hasQuiz && (
+          <TabsContent value="quiz">
+            <div className="max-w-2xl space-y-6">
+              {currentSection.quiz_questions!.map((question, index) => (
+                <Card key={question.id}>
+                  <CardContent className="pt-5 space-y-4">
+                    <div className="flex gap-3 items-start">
+                      <Badge variant="secondary" className="shrink-0 mt-0.5">{index + 1}</Badge>
+                      <p className="font-medium leading-relaxed">{question.question}</p>
+                    </div>
+
+                    {question.question_type === 'true_false' ? (
+                      <div className="flex items-center gap-4 pl-8">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`question-${question.id}`}
+                            value="true"
+                            checked={answers[question.id] === 'true'}
+                            onChange={() => handleAnswerChange(question.id, 'true')}
+                            disabled={!!quizResult}
+                            className="accent-primary"
+                          />
+                          <span className="text-sm">Verdadeiro</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`question-${question.id}`}
+                            value="false"
+                            checked={answers[question.id] === 'false'}
+                            onChange={() => handleAnswerChange(question.id, 'false')}
+                            disabled={!!quizResult}
+                            className="accent-primary"
+                          />
+                          <span className="text-sm">Falso</span>
+                        </label>
                       </div>
                     ) : (
-                      <Button
-                        onClick={handleQuizSubmit}
-                        disabled={isSubmitting}
-                        kind="primary"
-                      >
-                        {isSubmitting ? 'Enviando...' : 'Enviar respostas'}
-                      </Button>
+                      <div className="space-y-2 pl-8">
+                        {question.options?.map((option, optIdx) => (
+                          <label key={optIdx} className="flex items-start gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name={`question-${question.id}`}
+                              value={option}
+                              checked={answers[question.id] === option}
+                              onChange={() => handleAnswerChange(question.id, option)}
+                              disabled={!!quizResult}
+                              className="mt-0.5 accent-primary"
+                            />
+                            <span className="text-sm leading-relaxed">{option}</span>
+                          </label>
+                        ))}
+                      </div>
                     )}
-                  </Stack>
+
+                    {quizResult && (
+                      <QuizAnswerFeedback
+                        questionId={question.id}
+                        details={quizResult.details}
+                      />
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+
+              {quizError && (
+                <Alert variant="destructive">
+                  <AlertDescription>{quizError}</AlertDescription>
+                </Alert>
+              )}
+
+              {quizResult ? (
+                <div className="space-y-3">
+                  <Alert variant={quizResult.passed ? 'success' : 'default'}>
+                    <AlertTitle>{quizResult.passed ? 'Parabéns!' : 'Continue praticando'}</AlertTitle>
+                    <AlertDescription>
+                      Você acertou {quizResult.score} de {quizResult.total} questões ({quizResult.percentage}%).
+                    </AlertDescription>
+                  </Alert>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setQuizResult(null);
+                      setAnswers({});
+                    }}
+                  >
+                    Tentar novamente
+                  </Button>
                 </div>
-              </TabPanel>
-            )}
-            {/* Playground tab — always visible */}
-            <TabPanel>
-              <div style={{ maxWidth: '900px' }}>
-                <SPARQLPlayground
-                  defaultQuery="SELECT DISTINCT ?class WHERE { ?s a ?class } LIMIT 20"
-                />
-              </div>
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
-      </Column>
+              ) : (
+                <Button onClick={handleQuizSubmit} disabled={isSubmitting} className="gap-2">
+                  {isSubmitting ? (
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      Enviando...
+                    </>
+                  ) : (
+                    'Enviar respostas'
+                  )}
+                </Button>
+              )}
+            </div>
+          </TabsContent>
+        )}
 
-      <Column sm={4} md={8} lg={16}>
-        <div className="nav-actions">
-          <Button
-            kind="ghost"
-            renderIcon={ArrowLeft}
-            disabled={!prevSection}
-            onClick={() => prevSection && navigate(`/learn/${prevSection.id}`)}
-          >
-            {prevSection ? prevSection.title : 'Início'}
-          </Button>
+        {/* Playground tab */}
+        <TabsContent value="playground">
+          <div className="max-w-4xl">
+            <SPARQLPlayground
+              defaultQuery="SELECT DISTINCT ?class WHERE { ?s a ?class } LIMIT 20"
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
 
-          <Button
-            kind={nextSection ? 'primary' : 'ghost'}
-            renderIcon={ArrowRight}
-            disabled={!nextSection}
-            onClick={() => nextSection && navigate(`/learn/${nextSection.id}`)}
-          >
-            {nextSection ? nextSection.title : 'Fim do módulo'}
-          </Button>
-        </div>
-      </Column>
-    </Grid>
+      {/* Navigation */}
+      <div className="flex items-center justify-between pt-4 border-t">
+        <Button
+          variant="ghost"
+          disabled={!prevSection}
+          onClick={() => prevSection && navigate(`/learn/${prevSection.id}`)}
+          className="gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {prevSection ? prevSection.title : 'Início'}
+        </Button>
+
+        <Button
+          variant={nextSection ? 'default' : 'ghost'}
+          disabled={!nextSection}
+          onClick={() => nextSection && navigate(`/learn/${nextSection.id}`)}
+          className="gap-2"
+        >
+          {nextSection ? nextSection.title : 'Fim do módulo'}
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   );
 }
 
 // ---------------------------------------------------------------------------
 // Helper: extract a rough set of triples from rdflib-style Python code
-// so we can render a preview graph even before the code is executed.
 // ---------------------------------------------------------------------------
 interface DemoTriple {
   subject: string;
@@ -377,7 +366,6 @@ interface DemoTriple {
 function extractDemoTriples(code: string): DemoTriple[] {
   const triples: DemoTriple[] = [];
 
-  // Match patterns like: g.add((URIRef("..."), URIRef("..."), URIRef("...")|Literal("...")))
   const addPattern =
     /g\.add\(\s*\(\s*(URIRef\(["']([^"']+)["']\)|Literal\(["']([^"']+)["']\)|BNode\(\))\s*,\s*(URIRef\(["']([^"']+)["']\)|Literal\(["']([^"']+)["']\))\s*,\s*(URIRef\(["']([^"']+)["']\)|Literal\(["']([^"']+)["']\)|BNode\(\))\s*\)\s*\)/g;
 
@@ -411,16 +399,13 @@ function QuizAnswerFeedback({ questionId, details }: QuizAnswerFeedbackProps) {
   if (!detail) return null;
 
   return (
-    <InlineNotification
-      kind={detail.correct ? 'success' : 'error'}
-      title={detail.correct ? 'Correto!' : 'Incorreto'}
-      subtitle={
-        detail.correct
+    <Alert variant={detail.correct ? 'success' : 'destructive'} className="mt-2">
+      <AlertTitle>{detail.correct ? 'Correto!' : 'Incorreto'}</AlertTitle>
+      <AlertDescription>
+        {detail.correct
           ? detail.explanation
-          : `Resposta correta: ${detail.correct_answer}. ${detail.explanation}`
-      }
-      hideCloseButton
-      style={{ marginTop: 'var(--cds-spacing-03)' }}
-    />
+          : `Resposta correta: ${detail.correct_answer}. ${detail.explanation}`}
+      </AlertDescription>
+    </Alert>
   );
 }

@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Loading } from '@carbon/react';
 import { useAuthStore } from '../../stores/authStore';
 
 interface ProtectedRouteProps {
@@ -19,15 +18,11 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (isLoading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-        }}
-      >
-        <Loading description="Carregando..." withOverlay={false} />
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Carregando...</p>
+        </div>
       </div>
     );
   }

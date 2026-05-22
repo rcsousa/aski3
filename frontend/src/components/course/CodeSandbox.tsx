@@ -1,16 +1,11 @@
 import { useState } from 'react';
-import {
-  Button,
-  CodeSnippet,
-  InlineLoading,
-  InlineNotification,
-  Tag,
-  Tile,
-  Stack,
-} from '@carbon/react';
-import { Play, Reset } from '@carbon/icons-react';
+import { Play, RotateCcw } from 'lucide-react';
 import { api } from '../../stores/authStore';
 import type { CodeExample } from '../../types';
+import { Card, CardContent, CardHeader } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Alert, AlertDescription } from '../ui/alert';
 
 interface ExecResponse {
   stdout: string;
@@ -51,133 +46,115 @@ export function CodeSandbox({ example }: CodeSandboxProps) {
   };
 
   return (
-    <Tile>
-      <Stack gap={5}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--cds-spacing-03)', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontWeight: 600, fontSize: '1rem', margin: 0, marginBottom: 'var(--cds-spacing-02)' }}>
-              {example.title}
-            </p>
-            <Tag type="cool-gray" size="sm">
-              {example.language}
-            </Tag>
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <p className="font-semibold text-base">{example.title}</p>
+            {example.explanation && (
+              <p className="text-sm text-muted-foreground leading-relaxed">{example.explanation}</p>
+            )}
           </div>
+          <Badge variant="secondary" className="shrink-0">{example.language}</Badge>
         </div>
+      </CardHeader>
 
-        {/* Description */}
-        {example.explanation && (
-          <p style={{ color: 'var(--cds-text-secondary)', fontSize: '0.875rem', lineHeight: 1.6, margin: 0 }}>
-            {example.explanation}
-          </p>
-        )}
-
-        {/* Code Display */}
+      <CardContent className="space-y-4">
+        {/* Code block */}
         <div>
-          <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--cds-text-secondary)', marginBottom: 'var(--cds-spacing-02)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
             Código
           </p>
-          <CodeSnippet
-            type="multi"
-            feedback="Copiado!"
-            minCollapsedNumberOfRows={5}
-            maxCollapsedNumberOfRows={20}
-          >
-            {example.code}
-          </CodeSnippet>
+          <pre className="rounded-lg bg-[hsl(220_15%_14%)] text-slate-200 p-4 overflow-x-auto text-sm leading-relaxed font-mono">
+            <code>{example.code}</code>
+          </pre>
         </div>
 
-        {/* Expected Output */}
+        {/* Expected output */}
         {example.expected_output && (
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--cds-spacing-02)', marginBottom: 'var(--cds-spacing-02)' }}>
-              <Tag type="green" size="sm">Saída Esperada</Tag>
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="success">Saída Esperada</Badge>
             </div>
-            <CodeSnippet type="multi" feedback="Copiado!" hideCopyButton>
-              {example.expected_output}
-            </CodeSnippet>
+            <pre className="rounded-lg bg-muted p-4 overflow-x-auto text-sm leading-relaxed font-mono text-foreground">
+              <code>{example.expected_output}</code>
+            </pre>
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', gap: 'var(--cds-spacing-03)', alignItems: 'center', flexWrap: 'wrap' }}>
-          {isLoading ? (
-            <InlineLoading description="Executando..." status="active" />
-          ) : (
-            <Button
-              kind="primary"
-              renderIcon={Play}
-              onClick={handleExecute}
-              size="md"
-            >
-              Executar
-            </Button>
-          )}
+        {/* Action buttons */}
+        <div className="flex items-center gap-3">
           <Button
-            kind="ghost"
-            renderIcon={Reset}
+            onClick={handleExecute}
+            disabled={isLoading}
+            className="gap-2"
+          >
+            {isLoading ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Executando...
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4" />
+                Executar
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
             onClick={handleReset}
             disabled={isLoading}
-            size="md"
+            className="gap-2"
           >
+            <RotateCcw className="h-4 w-4" />
             Resetar
           </Button>
         </div>
 
         {/* Error */}
         {error && (
-          <InlineNotification
-            kind="error"
-            title="Erro de execução"
-            subtitle={error}
-            onCloseButtonClick={() => setError(null)}
-          />
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {/* Output */}
         {output && (
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--cds-spacing-03)', marginBottom: 'var(--cds-spacing-03)' }}>
-              <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--cds-text-secondary)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Saída
               </p>
-              <Tag type={output.success ? 'green' : 'red'} size="sm">
+              <Badge variant={output.success ? 'success' : 'destructive'}>
                 {output.success ? 'Sucesso' : 'Erro'}
-              </Tag>
+              </Badge>
             </div>
 
             {output.stdout && (
-              <div style={{ marginBottom: 'var(--cds-spacing-03)' }}>
-                <p style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary)', marginBottom: 'var(--cds-spacing-02)' }}>
-                  stdout
-                </p>
-                <CodeSnippet type="multi" feedback="Copiado!" hideCopyButton>
-                  {output.stdout}
-                </CodeSnippet>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">stdout</p>
+                <pre className="rounded-lg bg-muted p-3 overflow-x-auto text-sm font-mono">
+                  <code>{output.stdout}</code>
+                </pre>
               </div>
             )}
 
             {output.stderr && (
               <div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--cds-support-error)', marginBottom: 'var(--cds-spacing-02)' }}>
-                  stderr
-                </p>
-                <div style={{ border: '1px solid var(--cds-support-error)', borderRadius: '4px' }}>
-                  <CodeSnippet type="multi" feedback="Copiado!" hideCopyButton>
-                    {output.stderr}
-                  </CodeSnippet>
-                </div>
+                <p className="text-xs text-destructive mb-1">stderr</p>
+                <pre className="rounded-lg bg-destructive/5 border border-destructive/20 p-3 overflow-x-auto text-sm font-mono text-destructive">
+                  <code>{output.stderr}</code>
+                </pre>
               </div>
             )}
 
             {!output.stdout && !output.stderr && (
-              <p style={{ color: 'var(--cds-text-secondary)', fontSize: '0.875rem', fontStyle: 'italic' }}>
-                Nenhuma saída produzida.
-              </p>
+              <p className="text-sm text-muted-foreground italic">Nenhuma saída produzida.</p>
             )}
           </div>
         )}
-      </Stack>
-    </Tile>
+      </CardContent>
+    </Card>
   );
 }

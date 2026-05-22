@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 ONTO = Namespace("https://semantica.curso/ontology#")
-CONTENT_DIR = Path("/home/user/aski3/backend/content/modules")
+CONTENT_DIR = Path("/app/content/modules")
 
 # Module-level cache: None means "not yet built", str = Turtle serialisation
 _cached_ttl: str | None = None

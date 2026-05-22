@@ -56,7 +56,7 @@ export const useCourseStore = create<CourseState>((set) => ({
 
   fetchProgress: async () => {
     try {
-      const { data } = await api.get<UserProgress[]>('/progress');
+      const { data } = await api.get<UserProgress[]>('/progress/me');
       set({ progress: data });
     } catch {
       set({ progress: [] });
@@ -66,7 +66,7 @@ export const useCourseStore = create<CourseState>((set) => ({
   markSectionComplete: async (sectionId: number) => {
     try {
       await api.post(`/progress/${sectionId}/complete`);
-      const { data } = await api.get<UserProgress[]>('/progress');
+      const { data } = await api.get<UserProgress[]>('/progress/me');
       set({ progress: data });
     } catch {
       // Silently fail — progress sync is non-critical

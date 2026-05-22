@@ -9,7 +9,7 @@ from app.models.models import CodeExample, Course, Quiz, QuizType, Section
 
 logger = logging.getLogger(__name__)
 
-CONTENT_DIR = Path("/home/user/aski3/backend/content/modules")
+CONTENT_DIR = Path("/app/content/modules")
 
 
 async def load_all_modules(db: AsyncSession) -> None:

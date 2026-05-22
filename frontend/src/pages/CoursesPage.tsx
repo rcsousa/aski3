@@ -1,19 +1,11 @@
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  Grid,
-  Column,
-  Tile,
-  ClickableTile,
-  Tag,
-  ProgressBar,
-  Loading,
-  InlineNotification,
-  Heading,
-  Stack,
-} from '@carbon/react';
-import { Time, Education } from '@carbon/icons-react';
+import { Clock, BookOpen, CheckCircle2 } from 'lucide-react';
 import { useCourseStore } from '../stores/courseStore';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { Progress } from '../components/ui/progress';
+import { Alert, AlertDescription } from '../components/ui/alert';
 
 export function CoursesPage() {
   const navigate = useNavigate();
@@ -43,147 +35,124 @@ export function CoursesPage() {
 
   if (isLoading && courses.length === 0) {
     return (
-      <Grid>
-        <Column sm={4} md={8} lg={16}>
-          <div style={{ display: 'flex', justifyContent: 'center', padding: 'var(--cds-spacing-10)' }}>
-            <Loading description="Carregando cursos..." withOverlay={false} />
-          </div>
-        </Column>
-      </Grid>
+      <div className="flex items-center justify-center py-20">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Carregando cursos...</p>
+        </div>
+      </div>
     );
   }
 
+  // Course detail view (slug selected)
   if (slug && currentCourse) {
     return (
-      <Grid>
-        <Column sm={4} md={8} lg={16}>
-          <div className="page-header">
-            <Heading>{currentCourse.title}</Heading>
-            <p style={{ color: 'var(--cds-text-secondary)', marginTop: 'var(--cds-spacing-03)' }}>
-              {currentCourse.description}
-            </p>
-          </div>
-        </Column>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{currentCourse.title}</h1>
+          <p className="mt-1 text-muted-foreground">{currentCourse.description}</p>
+        </div>
 
-        {currentCourse.sections?.map((section) => {
-          const sectionProgress = progress.find((p) => p.section_id === section.id);
-          return (
-            <Column key={section.id} sm={4} md={4} lg={8} style={{ marginBottom: 'var(--cds-spacing-05)' }}>
-              <ClickableTile
-                className="course-tile"
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {currentCourse.sections?.map((section) => {
+            const sectionProgress = progress.find((p) => p.section_id === section.id);
+            return (
+              <Card
+                key={section.id}
+                className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all"
                 onClick={() => navigate(`/learn/${section.id}`)}
               >
-                <Stack gap={3}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <Tag type="blue" size="sm">
-                      Módulo {section.order_index + 1}
-                    </Tag>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <Badge variant="secondary">Módulo {section.order_index + 1}</Badge>
                     {sectionProgress?.completed && (
-                      <Tag type="green" size="sm">
+                      <Badge variant="success" className="flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" />
                         Concluído
-                      </Tag>
+                      </Badge>
                     )}
                   </div>
-                  <p style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--cds-text-primary)' }}>
-                    {section.title}
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--cds-spacing-02)', color: 'var(--cds-text-secondary)', fontSize: '0.875rem' }}>
-                    <Time size={16} />
+                  <CardTitle className="text-base mt-2">{section.title}</CardTitle>
+                </CardHeader>
+                <CardFooter className="pt-0">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Clock className="h-3.5 w-3.5" />
                     <span>{section.estimated_minutes} min</span>
                   </div>
-                </Stack>
-              </ClickableTile>
-            </Column>
-          );
-        })}
-      </Grid>
+                </CardFooter>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
     );
   }
 
+  // Courses list view
   return (
-    <Grid>
-      <Column sm={4} md={8} lg={16}>
-        <div className="page-header">
-          <Heading>Cursos Disponíveis</Heading>
-          <p style={{ color: 'var(--cds-text-secondary)', marginTop: 'var(--cds-spacing-03)' }}>
-            Explore os cursos e comece sua jornada de aprendizado.
-          </p>
-        </div>
-      </Column>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Cursos Disponíveis</h1>
+        <p className="mt-1 text-muted-foreground">Explore os cursos e comece sua jornada de aprendizado.</p>
+      </div>
 
       {error && (
-        <Column sm={4} md={8} lg={16}>
-          <InlineNotification
-            kind="error"
-            title="Erro"
-            subtitle={error}
-            hideCloseButton
-          />
-        </Column>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
-      {courses.map((course) => {
-        const progressPct = getSectionProgress(course.id);
-        return (
-          <Column key={course.id} sm={4} md={4} lg={8} style={{ marginBottom: 'var(--cds-spacing-05)' }}>
-            <ClickableTile
-              className="course-tile"
-              style={{ height: '100%' }}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        {courses.map((course) => {
+          const progressPct = getSectionProgress(course.id);
+          return (
+            <Card
+              key={course.id}
+              className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all flex flex-col"
               onClick={() => navigate(`/courses/${course.slug}`)}
             >
-              <Stack gap={4}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Tag type="blue">
-                    <Education size={12} style={{ marginRight: '4px' }} />
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <Badge variant="default" className="flex items-center gap-1">
+                    <BookOpen className="h-3 w-3" />
                     Curso
-                  </Tag>
-                  {!course.is_published && <Tag type="warm-gray">Rascunho</Tag>}
+                  </Badge>
+                  {!course.is_published && <Badge variant="secondary">Rascunho</Badge>}
                 </div>
+                <CardTitle className="text-lg mt-2">{course.title}</CardTitle>
+                <CardDescription className="line-clamp-2">{course.description}</CardDescription>
+              </CardHeader>
 
-                <div>
-                  <p style={{ fontWeight: 600, fontSize: '1.125rem', marginBottom: 'var(--cds-spacing-02)', color: 'var(--cds-text-primary)' }}>
-                    {course.title}
-                  </p>
-                  <p style={{ color: 'var(--cds-text-secondary)', fontSize: '0.875rem', lineHeight: 1.5 }}>
-                    {course.description}
-                  </p>
-                </div>
-
-                <Tile style={{ padding: 'var(--cds-spacing-04)', backgroundColor: 'var(--cds-layer-02)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--cds-spacing-03)' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary)' }}>Progresso</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--cds-text-primary)' }}>
-                      {progressPct}%
-                    </span>
+              <CardContent className="flex-1">
+                <div className="rounded-md bg-muted/50 p-3 space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground font-medium">Progresso</span>
+                    <span className="font-semibold">{progressPct}%</span>
                   </div>
-                  <ProgressBar
-                    value={progressPct}
-                    max={100}
-                    label=""
-                    hideLabel
-                    size="small"
-                  />
-                </Tile>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--cds-spacing-02)', color: 'var(--cds-text-secondary)', fontSize: '0.875rem' }}>
-                  <Time size={16} />
-                  <span>{course.estimated_hours}h estimadas</span>
+                  <Progress value={progressPct} className="h-2" />
                 </div>
-              </Stack>
-            </ClickableTile>
-          </Column>
-        );
-      })}
+              </CardContent>
+
+              <CardFooter className="pt-0">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{course.estimated_hours}h estimadas</span>
+                  <span className="mx-1 text-border">·</span>
+                  <span>{course.sections?.length ?? 0} seções</span>
+                </div>
+              </CardFooter>
+            </Card>
+          );
+        })}
+      </div>
 
       {!isLoading && courses.length === 0 && (
-        <Column sm={4} md={8} lg={16}>
-          <Tile>
-            <p style={{ color: 'var(--cds-text-secondary)', textAlign: 'center', padding: 'var(--cds-spacing-07)' }}>
-              Nenhum curso disponível no momento.
-            </p>
-          </Tile>
-        </Column>
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            Nenhum curso disponível no momento.
+          </CardContent>
+        </Card>
       )}
-    </Grid>
+    </div>
   );
 }

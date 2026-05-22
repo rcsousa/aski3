@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
-import {
-  Tile,
-  Modal,
-  Toggle,
-  Slider,
-  Tag,
-  Stack,
-} from '@carbon/react';
+import { Card, CardContent, CardHeader } from '../ui/card';
+import { Badge } from '../ui/badge';
 
 interface Triple {
   subject: string;
@@ -37,11 +31,10 @@ interface GraphData {
   links: GraphLink[];
 }
 
-// Color palette from IBM Carbon
 const NODE_COLORS: Record<GraphNode['nodeType'], string> = {
-  uri: '#0f62fe',     // Carbon Blue 60
-  literal: '#24a148', // Carbon Green 40
-  blank: '#8d8d8d',   // Carbon Gray 50
+  uri: '#6366f1',     // indigo-500
+  literal: '#22c55e', // green-500
+  blank: '#94a3b8',   // slate-400
 };
 
 function classifyNode(value: string): GraphNode['nodeType'] {
@@ -51,10 +44,8 @@ function classifyNode(value: string): GraphNode['nodeType'] {
 }
 
 function truncateLabel(value: string): string {
-  // Remove angle brackets from URIs
   const clean = value.replace(/^<|>$/g, '');
 
-  // If it's a URI, get the local name
   if (clean.startsWith('http://') || clean.startsWith('https://')) {
     const hashIdx = clean.lastIndexOf('#');
     const slashIdx = clean.lastIndexOf('/');
@@ -62,11 +53,9 @@ function truncateLabel(value: string): string {
     if (splitIdx > -1 && splitIdx < clean.length - 1) {
       return clean.substring(splitIdx + 1);
     }
-    // Fallback: take last 20 chars
     return clean.length > 20 ? '...' + clean.slice(-20) : clean;
   }
 
-  // Literals: trim quotes and truncate
   const stripped = clean.replace(/^"|"$|^'|'$/g, '');
   return stripped.length > 30 ? stripped.substring(0, 27) + '...' : stripped;
 }
@@ -107,11 +96,9 @@ export function KGVisualizer({ triples, title }: KGVisualizerProps) {
   const [showLabels, setShowLabels] = useState(true);
   const [linkDistance, setLinkDistance] = useState(80);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const graphData = buildGraphData(triples);
 
-  // Measure container width responsively
   useEffect(() => {
     const measure = () => {
       if (containerRef.current) {
@@ -125,7 +112,6 @@ export function KGVisualizer({ triples, title }: KGVisualizerProps) {
     return () => ro.disconnect();
   }, []);
 
-  // Triples for the selected node panel
   const selectedTriples = selectedNode
     ? triples.filter(
         (t) => t.subject === selectedNode.id || t.object === selectedNode.id,
@@ -134,8 +120,7 @@ export function KGVisualizer({ triples, title }: KGVisualizerProps) {
 
   const handleNodeClick = useCallback((node: object) => {
     const gNode = node as GraphNode;
-    setSelectedNode(gNode);
-    setIsModalOpen(true);
+    setSelectedNode((prev) => (prev?.id === gNode.id ? null : gNode));
   }, []);
 
   const nodeCanvasObject = useCallback(
@@ -146,7 +131,6 @@ export function KGVisualizer({ triples, title }: KGVisualizerProps) {
       const radius = 6;
       const color = NODE_COLORS[gNode.nodeType];
 
-      // Draw node circle
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, 2 * Math.PI);
       ctx.fillStyle = color;
@@ -155,13 +139,12 @@ export function KGVisualizer({ triples, title }: KGVisualizerProps) {
       ctx.lineWidth = 1.5 / globalScale;
       ctx.stroke();
 
-      // Draw label if enabled
       if (showLabels) {
         const fontSize = Math.max(10 / globalScale, 4);
-        ctx.font = `${fontSize}px IBM Plex Mono, monospace`;
+        ctx.font = `${fontSize}px monospace`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'var(--cds-text-primary, #161616)';
+        ctx.fillStyle = '#1e293b';
         ctx.fillText(gNode.label, x, y + radius + fontSize);
       }
     },
@@ -180,23 +163,21 @@ export function KGVisualizer({ triples, title }: KGVisualizerProps) {
       const tx = gLink.target.x ?? 0;
       const ty = gLink.target.y ?? 0;
 
-      // Draw edge line
       ctx.beginPath();
       ctx.moveTo(sx, sy);
       ctx.lineTo(tx, ty);
-      ctx.strokeStyle = 'rgba(141,141,141,0.5)';
+      ctx.strokeStyle = 'rgba(148,163,184,0.5)';
       ctx.lineWidth = 1 / globalScale;
       ctx.stroke();
 
-      // Draw predicate label at midpoint
       if (showLabels) {
         const mx = (sx + tx) / 2;
         const my = (sy + ty) / 2;
         const fontSize = Math.max(8 / globalScale, 3);
-        ctx.font = `italic ${fontSize}px IBM Plex Sans, sans-serif`;
+        ctx.font = `italic ${fontSize}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'rgba(82,82,82,0.85)';
+        ctx.fillStyle = 'rgba(100,116,139,0.85)';
         ctx.fillText(gLink.label, mx, my);
       }
     },
@@ -204,25 +185,27 @@ export function KGVisualizer({ triples, title }: KGVisualizerProps) {
   );
 
   return (
-    <Tile>
-      <Stack gap={5}>
-        {/* Header */}
+    <Card>
+      <CardHeader className="pb-3">
         {title && (
-          <div style={{ borderBottom: '1px solid var(--cds-border-subtle)', paddingBottom: 'var(--cds-spacing-04)' }}>
-            <p style={{ fontWeight: 600, fontSize: '1.125rem', margin: 0 }}>{title}</p>
-            <p style={{ color: 'var(--cds-text-secondary)', fontSize: '0.875rem', marginTop: 'var(--cds-spacing-02)', margin: 0 }}>
+          <div>
+            <p className="font-semibold text-lg">{title}</p>
+            <p className="text-sm text-muted-foreground mt-1">
               {graphData.nodes.length} nós · {graphData.links.length} relações
             </p>
           </div>
         )}
 
         {/* Legend */}
-        <div style={{ display: 'flex', gap: 'var(--cds-spacing-03)', flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary)', fontWeight: 600 }}>Legenda:</span>
+        <div className="flex flex-wrap items-center gap-3 mt-2">
+          <span className="text-xs font-semibold text-muted-foreground">Legenda:</span>
           {(['uri', 'literal', 'blank'] as const).map((type) => (
-            <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 'var(--cds-spacing-02)' }}>
-              <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', backgroundColor: NODE_COLORS[type] }} />
-              <span style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary)', textTransform: 'capitalize' }}>
+            <div key={type} className="flex items-center gap-1.5">
+              <span
+                className="inline-block h-3 w-3 rounded-full"
+                style={{ backgroundColor: NODE_COLORS[type] }}
+              />
+              <span className="text-xs text-muted-foreground capitalize">
                 {type === 'uri' ? 'URI' : type === 'literal' ? 'Literal' : 'Blank Node'}
               </span>
             </div>
@@ -230,42 +213,44 @@ export function KGVisualizer({ triples, title }: KGVisualizerProps) {
         </div>
 
         {/* Controls */}
-        <div style={{ display: 'flex', gap: 'var(--cds-spacing-07)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <Toggle
-            id="kg-show-labels"
-            labelText="Rótulos"
-            labelA="Ocultar"
-            labelB="Exibir"
-            toggled={showLabels}
-            onToggle={(checked: boolean) => setShowLabels(checked)}
-            size="sm"
-          />
-          <div style={{ minWidth: 200 }}>
-            <Slider
+        <div className="flex flex-wrap items-center gap-4 mt-3">
+          <label className="flex items-center gap-2 cursor-pointer text-sm">
+            <input
+              type="checkbox"
+              checked={showLabels}
+              onChange={(e) => setShowLabels(e.target.checked)}
+              className="accent-primary"
+            />
+            Exibir rótulos
+          </label>
+
+          <div className="flex items-center gap-2 text-sm">
+            <label htmlFor="kg-link-distance" className="text-muted-foreground whitespace-nowrap">
+              Distância:
+            </label>
+            <input
               id="kg-link-distance"
-              labelText="Distância dos links"
+              type="range"
               min={30}
               max={200}
               step={10}
               value={linkDistance}
-              onChange={({ value }: { value: number }) => setLinkDistance(value)}
+              onChange={(e) => setLinkDistance(Number(e.target.value))}
+              className="w-28 accent-primary"
             />
+            <span className="text-xs text-muted-foreground w-6">{linkDistance}</span>
           </div>
         </div>
+      </CardHeader>
 
-        {/* Graph Canvas */}
+      <CardContent className="space-y-4 pt-0">
+        {/* Graph canvas */}
         <div
           ref={containerRef}
-          style={{
-            border: '1px solid var(--cds-border-subtle)',
-            borderRadius: '4px',
-            overflow: 'hidden',
-            background: 'var(--cds-layer)',
-            width: '100%',
-          }}
+          className="rounded-lg border overflow-hidden bg-slate-50 w-full"
         >
           {graphData.nodes.length === 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: 'var(--cds-text-secondary)' }}>
+            <div className="flex items-center justify-center h-72 text-muted-foreground text-sm">
               Nenhum dado de grafo disponível.
             </div>
           ) : (
@@ -291,81 +276,78 @@ export function KGVisualizer({ triples, title }: KGVisualizerProps) {
           )}
         </div>
 
-        <p style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary)', margin: 0 }}>
+        <p className="text-xs text-muted-foreground">
           Clique em um nó para ver seus detalhes. Arraste para mover. Scroll para zoom.
         </p>
-      </Stack>
 
-      {/* Node Detail Modal */}
-      <Modal
-        open={isModalOpen}
-        modalHeading={selectedNode ? `Nó: ${selectedNode.label}` : ''}
-        passiveModal
-        onRequestClose={() => setIsModalOpen(false)}
-        size="md"
-      >
+        {/* Selected node detail panel */}
         {selectedNode && (
-          <Stack gap={4}>
-            <div style={{ display: 'flex', gap: 'var(--cds-spacing-02)', flexWrap: 'wrap' }}>
-              <Tag type={
-                selectedNode.nodeType === 'uri' ? 'blue' :
-                selectedNode.nodeType === 'literal' ? 'green' : 'gray'
-              } size="sm">
+          <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-sm">Nó: {selectedNode.label}</p>
+              <button
+                onClick={() => setSelectedNode(null)}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                fechar ×
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              <Badge
+                variant={
+                  selectedNode.nodeType === 'uri'
+                    ? 'default'
+                    : selectedNode.nodeType === 'literal'
+                    ? 'success'
+                    : 'secondary'
+                }
+              >
                 {selectedNode.nodeType === 'uri' ? 'URI' : selectedNode.nodeType === 'literal' ? 'Literal' : 'Blank Node'}
-              </Tag>
+              </Badge>
             </div>
 
             <div>
-              <p style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary)', marginBottom: 'var(--cds-spacing-02)', fontWeight: 600 }}>
-                Identificador completo
-              </p>
-              <code style={{
-                display: 'block',
-                padding: 'var(--cds-spacing-03)',
-                background: 'var(--cds-layer-accent)',
-                borderRadius: '4px',
-                fontSize: '0.8125rem',
-                wordBreak: 'break-all',
-                fontFamily: 'IBM Plex Mono, monospace',
-              }}>
+              <p className="text-xs text-muted-foreground font-semibold mb-1">Identificador completo</p>
+              <code className="block bg-background border rounded p-2 text-xs break-all font-mono">
                 {selectedNode.id}
               </code>
             </div>
 
-            <div>
-              <p style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary)', marginBottom: 'var(--cds-spacing-03)', fontWeight: 600 }}>
-                Triplas relacionadas ({selectedTriples.length})
-              </p>
-              <Stack gap={3}>
-                {selectedTriples.map((triple, idx) => (
-                  <div key={idx} style={{
-                    padding: 'var(--cds-spacing-03)',
-                    background: 'var(--cds-layer)',
-                    border: '1px solid var(--cds-border-subtle)',
-                    borderRadius: '4px',
-                    fontSize: '0.8125rem',
-                  }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr', gap: 'var(--cds-spacing-02)', alignItems: 'baseline' }}>
-                      <span style={{ color: 'var(--cds-text-secondary)', fontWeight: 600 }}>S:</span>
-                      <code style={{ fontFamily: 'IBM Plex Mono, monospace', wordBreak: 'break-all', color: triple.subject === selectedNode.id ? NODE_COLORS.uri : 'inherit' }}>
-                        {truncateLabel(triple.subject)}
-                      </code>
-                      <span style={{ color: 'var(--cds-text-secondary)', fontWeight: 600 }}>P:</span>
-                      <code style={{ fontFamily: 'IBM Plex Mono, monospace', wordBreak: 'break-all', color: 'var(--cds-support-warning)' }}>
-                        {truncateLabel(triple.predicate)}
-                      </code>
-                      <span style={{ color: 'var(--cds-text-secondary)', fontWeight: 600 }}>O:</span>
-                      <code style={{ fontFamily: 'IBM Plex Mono, monospace', wordBreak: 'break-all', color: triple.object === selectedNode.id ? NODE_COLORS.uri : 'inherit' }}>
-                        {truncateLabel(triple.object)}
-                      </code>
+            {selectedTriples.length > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground font-semibold mb-2">
+                  Triplas relacionadas ({selectedTriples.length})
+                </p>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {selectedTriples.map((triple, idx) => (
+                    <div key={idx} className="bg-background border rounded p-2 text-xs font-mono space-y-0.5">
+                      <div className="grid grid-cols-[1.5rem_1fr] gap-1">
+                        <span className="text-muted-foreground font-semibold">S:</span>
+                        <code
+                          className="break-all"
+                          style={{ color: triple.subject === selectedNode.id ? NODE_COLORS.uri : undefined }}
+                        >
+                          {truncateLabel(triple.subject)}
+                        </code>
+                        <span className="text-muted-foreground font-semibold">P:</span>
+                        <code className="break-all text-amber-600">{truncateLabel(triple.predicate)}</code>
+                        <span className="text-muted-foreground font-semibold">O:</span>
+                        <code
+                          className="break-all"
+                          style={{ color: triple.object === selectedNode.id ? NODE_COLORS.uri : undefined }}
+                        >
+                          {truncateLabel(triple.object)}
+                        </code>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </Stack>
-            </div>
-          </Stack>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
-      </Modal>
-    </Tile>
+      </CardContent>
+    </Card>
   );
 }

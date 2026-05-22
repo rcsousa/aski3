@@ -8,12 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import get_current_user
 from app.db.database import get_db
 from app.models.models import Quiz, User, UserProgress
-from app.schemas.schemas import QuizResult, QuizSubmission, QuizSubmissionResponse
+from app.schemas.schemas import QuizAnswerDetail, QuizResult, QuizResultResponse, QuizSubmission
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
 
 
-@router.post("/{section_id}/submit", response_model=QuizSubmissionResponse)
+@router.post("/{section_id}/submit", response_model=QuizResultResponse)
 async def submit_quiz(
     section_id: int,
     submission: QuizSubmission,
@@ -73,4 +73,19 @@ async def submit_quiz(
 
     await db.flush()
 
-    return QuizSubmissionResponse(score=score, total=total, correct=correct_count, results=results)
+    percentage = round(correct_count / total * 100, 1) if total > 0 else 0.0
+    return QuizResultResponse(
+        score=correct_count,
+        total=total,
+        percentage=percentage,
+        passed=percentage >= 70.0,
+        details=[
+            QuizAnswerDetail(
+                question_id=r.question_id,
+                correct=r.is_correct,
+                correct_answer=r.correct_answer,
+                explanation=r.explanation,
+            )
+            for r in results
+        ],
+    )
